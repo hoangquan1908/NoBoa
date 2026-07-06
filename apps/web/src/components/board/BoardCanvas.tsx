@@ -108,6 +108,7 @@ export function BoardCanvas({ board, onUpdate }: BoardCanvasProps) {
   }, []);
 
   const handleBgDown = useCallback((e: React.MouseEvent) => {
+    if (e.button === 1) e.preventDefault(); // Stop browser auto-scroll compass
     if ((e.button !== 0 && e.button !== 1) || tool === "draw" || tool === "erase") return;
     if (e.button === 0 && tool === "text") {
       const bp = toBoard(e.clientX, e.clientY);
@@ -220,6 +221,8 @@ export function BoardCanvas({ board, onUpdate }: BoardCanvasProps) {
   }, [tool, drawColor, drawWidth, pushSnap]);
 
   const handleItemDown = useCallback((e: React.MouseEvent, id: string) => {
+    if (e.button === 1) e.preventDefault(); // bubble to bg
+    if (e.button !== 0) return;
     e.stopPropagation();
     const item = snapRef.current.items.find((i) => i.id === id);
     if (!item || item.locked) return;
