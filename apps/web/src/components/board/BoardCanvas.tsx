@@ -49,6 +49,8 @@ export function BoardCanvas({ board, onUpdate }: BoardCanvasProps) {
   const panningRef = useRef(panning); panningRef.current = panning;
   const selectingRef = useRef(selecting); selectingRef.current = selecting;
   const resizingRef = useRef(resizing); resizingRef.current = resizing;
+  const expandedStickyIdRef = useRef(expandedStickyId); expandedStickyIdRef.current = expandedStickyId;
+  const lightboxRef = useRef(lightbox); lightboxRef.current = lightbox;
 
   useEffect(() => { panRef.current = pan; }, [pan]);
   useEffect(() => { scaleRef.current = scale; }, [scale]);
@@ -99,14 +101,24 @@ export function BoardCanvas({ board, onUpdate }: BoardCanvasProps) {
     });
   };
 
-  const isPanTrigger = useCallback((e: { button: number }) => {
-    return e.button === 1 || (e.button === 0 && spaceHeldRef.current);
+  const startPanAt = useCallback((clientX: number, clientY: number) => {
+    setPanning({ sx: clientX, sy: clientY, px0: panRef.current.x, py0: panRef.current.y });
   }, []);
 
-  const startPan = useCallback((e: React.MouseEvent) => {
-    e.preventDefault();
-    setPanning({ sx: e.clientX, sy: e.clientY, px0: panRef.current.x, py0: panRef.current.y });
-  }, []);
+  // Capture middle-mouse / Space+drag before child layers (items, draw overlay, etc.)
+  useEffect(() => {
+    const el = containerRef.current;
+    if (!el) return;
+    const onMouseDown = (e: MouseEvent) => {
+      if (expandedStickyIdRef.current || lightboxRef.current) return;
+      if (e.button !== 1 && !(e.button === 0 && spaceHeldRef.current)) return;
+      e.preventDefault();
+      e.stopPropagation();
+      startPanAt(e.clientX, e.clientY);
+    };
+    el.addEventListener("mousedown", onMouseDown, true);
+    return () => el.removeEventListener("mousedown", onMouseDown, true);
+  }, [startPanAt]);
 
   const handleWheel = useCallback((e: React.WheelEvent) => {
     e.preventDefault();
@@ -128,7 +140,6 @@ export function BoardCanvas({ board, onUpdate }: BoardCanvasProps) {
   }, []);
 
   const handleBgDown = useCallback((e: React.MouseEvent) => {
-    if (isPanTrigger(e)) { startPan(e); return; }
     if (e.button !== 0 || tool === "draw" || tool === "erase") return;
     if (tool === "text") {
       const bp = toBoard(e.clientX, e.clientY);
@@ -150,7 +161,7 @@ export function BoardCanvas({ board, onUpdate }: BoardCanvasProps) {
       const bp = toBoard(e.clientX, e.clientY);
       setSelecting({ bx0: bp.x, by0: bp.y, bx1: bp.x, by1: bp.y });
     }
-  }, [tool, toBoard, pushSnap, isPanTrigger, startPan]);
+  }, [tool, toBoard, pushSnap]);
 
   useEffect(() => {
     if (!panning) return;
@@ -218,11 +229,10 @@ export function BoardCanvas({ board, onUpdate }: BoardCanvasProps) {
   }, [pushSnap]);
 
   const handleDrawDown = useCallback((e: React.MouseEvent) => {
-    if (isPanTrigger(e)) { startPan(e); return; }
     e.stopPropagation();
     isDrawing.current = true;
     setCurStroke([toBoard(e.clientX, e.clientY)]);
-  }, [toBoard, isPanTrigger, startPan]);
+  }, [toBoard]);
 
   const handleDrawMove = useCallback((e: React.MouseEvent) => {
     if (!isDrawing.current) return;
@@ -250,7 +260,6 @@ export function BoardCanvas({ board, onUpdate }: BoardCanvasProps) {
   }, [tool, drawColor, drawWidth, pushSnap]);
 
   const handleItemDown = useCallback((e: React.MouseEvent, id: string) => {
-    if (isPanTrigger(e)) { startPan(e); return; }
     if (e.button !== 0) return;
     e.stopPropagation();
     const item = snapRef.current.items.find((i) => i.id === id);
@@ -277,16 +286,15 @@ export function BoardCanvas({ board, onUpdate }: BoardCanvasProps) {
       snapRef.current.items.forEach(i => { if (fresh.has(i.id)) posMap[i.id] = {x:i.x, y:i.y}; });
       setDragging({ ids: Array.from(fresh), bx0: bp.x, by0: bp.y, initialPos: posMap });
     }
-  }, [tool, connectFrom, connColor, pushSnap, toBoard, isPanTrigger, startPan]);
+  }, [tool, connectFrom, connColor, pushSnap, toBoard]);
 
   const handleResizeDown = useCallback((e: React.MouseEvent, id: string) => {
-    if (isPanTrigger(e)) { startPan(e); return; }
     e.stopPropagation();
     const item = snapRef.current.items.find((i) => i.id === id);
     if (!item || item.type === "text") return;
     const bp = toBoard(e.clientX, e.clientY);
     setResizing({ id, bx0: bp.x, by0: bp.y, w0: (item as StickyItem | ImageItem).w, h0: (item as StickyItem | ImageItem).h });
-  }, [toBoard, isPanTrigger, startPan]);
+  }, [toBoard]);
 
   const isTypingTarget = () => {
     const el = document.activeElement;
@@ -517,8 +525,16 @@ export function BoardCanvas({ board, onUpdate }: BoardCanvasProps) {
             width: BOARD_SIZE, height: BOARD_SIZE,
             transform: `translate(${pan.x}px,${pan.y}px) scale(${scale})`,
             transformOrigin: "0 0", zIndex: 2,
+            pointerEvents: "none",
           }}
         >
+          {/* Hit layer: catches clicks on empty board space between items */}
+          <div
+            className="absolute inset-0"
+            style={{ width: BOARD_SIZE, height: BOARD_SIZE, zIndex: 0, pointerEvents: "auto" }}
+            onMouseDown={handleBgDown}
+          />
+
           {selecting && (
             <div
               style={{

@@ -41,6 +41,7 @@ export function BoardItemView({
     left: item.x,
     top: item.y,
     zIndex: selected ? item.zIndex + 1000 : item.zIndex,
+    pointerEvents: "auto",
     cursor: item.locked
       ? "default"
       : tool === "select" || tool === "connect"
