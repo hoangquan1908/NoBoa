@@ -8,7 +8,9 @@ const INITIAL_NOTES = initNotes();
 
 export default function App() {
   const [notes, setNotes] = useState<Note[]>(INITIAL_NOTES);
-  const [activeId, setActiveId] = useState<string>(INITIAL_NOTES[0].id);
+  const [activeId, setActiveId] = useState<string | null>(
+    INITIAL_NOTES.length > 0 ? INITIAL_NOTES[0].id : null
+  );
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [saved, setSaved] = useState(true);
   const saveTimer = useRef<ReturnType<typeof setTimeout>>();
@@ -29,10 +31,11 @@ export default function App() {
   };
 
   const deleteNote = (id: string) => {
-    if (notes.length <= 1) return;
     setNotes((prev) => {
       const next = prev.filter((n) => n.id !== id);
-      if (id === activeId) setActiveId(next[0].id);
+      if (id === activeId) {
+        setActiveId(next.length > 0 ? next[0].id : null);
+      }
       return next;
     });
   };

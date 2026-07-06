@@ -34,14 +34,16 @@ export function BoardCanvas({ board, onUpdate }: BoardCanvasProps) {
   const [lightbox, setLightbox] = useState<{ srcs: string[]; idx: number } | null>(null);
   const [urlOpen, setUrlOpen] = useState(false);
   const [urlVal, setUrlVal] = useState("");
-  const [dragging, setDragging] = useState<{ id: string; bx0: number; by0: number; ix0: number; iy0: number } | null>(null);
+  const [dragging, setDragging] = useState<{ ids: string[]; bx0: number; by0: number; initialPos: Record<string, {x: number, y: number}> } | null>(null);
   const [panning, setPanning] = useState<{ sx: number; sy: number; px0: number; py0: number } | null>(null);
+  const [selecting, setSelecting] = useState<{ bx0: number; by0: number; bx1: number; by1: number } | null>(null);
   const [resizing, setResizing] = useState<{ id: string; bx0: number; by0: number; w0: number; h0: number } | null>(null);
   const [curStroke, setCurStroke] = useState<StrokePoint[] | null>(null);
   const isDrawing = useRef(false);
   const fileRef = useRef<HTMLInputElement>(null);
   const draggingRef = useRef(dragging); draggingRef.current = dragging;
   const panningRef = useRef(panning); panningRef.current = panning;
+  const selectingRef = useRef(selecting); selectingRef.current = selecting;
   const resizingRef = useRef(resizing); resizingRef.current = resizing;
 
   useEffect(() => { panRef.current = pan; }, [pan]);
@@ -106,8 +108,8 @@ export function BoardCanvas({ board, onUpdate }: BoardCanvasProps) {
   }, []);
 
   const handleBgDown = useCallback((e: React.MouseEvent) => {
-    if (e.button !== 0 || tool === "draw" || tool === "erase") return;
-    if (tool === "text") {
+    if ((e.button !== 0 && e.button !== 1) || tool === "draw" || tool === "erase") return;
+    if (e.button === 0 && tool === "text") {
       const bp = toBoard(e.clientX, e.clientY);
       const s = snapRef.current;
       const item: TextItem = {
@@ -123,7 +125,12 @@ export function BoardCanvas({ board, onUpdate }: BoardCanvasProps) {
     }
     setSelectedIds(new Set());
     setConnectFrom(null);
-    setPanning({ sx: e.clientX, sy: e.clientY, px0: panRef.current.x, py0: panRef.current.y });
+    if (e.button === 1 || tool !== "select") {
+      setPanning({ sx: e.clientX, sy: e.clientY, px0: panRef.current.x, py0: panRef.current.y });
+    } else {
+      const bp = toBoard(e.clientX, e.clientY);
+      setSelecting({ bx0: bp.x, by0: bp.y, bx1: bp.x, by1: bp.y });
+    }
   }, [tool, toBoard, pushSnap]);
 
   const handleMouseMove = useCallback((e: React.MouseEvent) => {
@@ -135,11 +142,31 @@ export function BoardCanvas({ board, onUpdate }: BoardCanvasProps) {
     const drag = draggingRef.current;
     if (drag) {
       const bp = toBoard(e.clientX, e.clientY);
-      let nx = drag.ix0 + bp.x - drag.bx0, ny = drag.iy0 + bp.y - drag.by0;
-      if (snapGrid) { nx = Math.round(nx / 20) * 20; ny = Math.round(ny / 20) * 20; }
+      let dx = bp.x - drag.bx0, dy = bp.y - drag.by0;
+      if (snapGrid) { dx = Math.round(dx / 20) * 20; dy = Math.round(dy / 20) * 20; }
       const b = boardRef.current;
-      const newItems = snapRef.current.items.map((i) => i.id === drag.id ? { ...i, x: nx, y: ny } : i);
+      const newItems = snapRef.current.items.map((i) => {
+        if (drag.ids.includes(i.id)) {
+          return { ...i, x: drag.initialPos[i.id].x + dx, y: drag.initialPos[i.id].y + dy };
+        }
+        return i;
+      });
       onUpdate({ ...b, snapshot: { ...snapRef.current, items: newItems } });
+      return;
+    }
+    const sel = selectingRef.current;
+    if (sel) {
+      const bp = toBoard(e.clientX, e.clientY);
+      setSelecting({ ...sel, bx1: bp.x, by1: bp.y });
+      const minX = Math.min(sel.bx0, bp.x), maxX = Math.max(sel.bx0, bp.x);
+      const minY = Math.min(sel.by0, bp.y), maxY = Math.max(sel.by0, bp.y);
+      const freshlySelected = new Set<string>();
+      snapRef.current.items.forEach(i => {
+        const w = (i as any).w || ((i as any).type === "text" ? 100 : 200);
+        const h = (i as any).h || ((i as any).type === "text" ? 40 : 150);
+        if (i.x < maxX && i.x + w > minX && i.y < maxY && i.y + h > minY) freshlySelected.add(i.id);
+      });
+      setSelectedIds(freshlySelected);
       return;
     }
     const rsz = resizingRef.current;
@@ -156,6 +183,7 @@ export function BoardCanvas({ board, onUpdate }: BoardCanvasProps) {
 
   const handleMouseUp = useCallback(() => {
     if (panningRef.current) { setPanning(null); return; }
+    if (selectingRef.current) { setSelecting(null); return; }
     if (draggingRef.current) { pushSnap(snapRef.current); setDragging(null); return; }
     if (resizingRef.current) { pushSnap(snapRef.current); setResizing(null); }
   }, [pushSnap]);
@@ -207,9 +235,15 @@ export function BoardCanvas({ board, onUpdate }: BoardCanvasProps) {
       return;
     }
     if (tool === "select") {
-      setSelectedIds(new Set([id]));
+      let fresh = selectedIds;
+      if (!selectedIds.has(id)) {
+        fresh = new Set([id]);
+        setSelectedIds(fresh);
+      }
       const bp = toBoard(e.clientX, e.clientY);
-      setDragging({ id, bx0: bp.x, by0: bp.y, ix0: item.x, iy0: item.y });
+      const posMap: Record<string, {x:number, y:number}> = {};
+      snapRef.current.items.forEach(i => { if (fresh.has(i.id)) posMap[i.id] = {x:i.x, y:i.y}; });
+      setDragging({ ids: Array.from(fresh), bx0: bp.x, by0: bp.y, initialPos: posMap });
     }
   }, [tool, connectFrom, connColor, pushSnap, toBoard]);
 
@@ -271,6 +305,20 @@ export function BoardCanvas({ board, onUpdate }: BoardCanvasProps) {
       } as ImageItem],
     });
   };
+
+  useEffect(() => {
+    const handlePaste = (e: ClipboardEvent) => {
+      if (document.activeElement instanceof HTMLInputElement || document.activeElement instanceof HTMLTextAreaElement) return;
+      const file = Array.from(e.clipboardData?.items || []).find(i => i.type.startsWith("image/"))?.getAsFile();
+      if (file) {
+        const r = new FileReader();
+        r.onload = (ev) => { if (typeof ev.target?.result === "string") addImageFromSrc(ev.target.result); };
+        r.readAsDataURL(file);
+      }
+    };
+    window.addEventListener("paste", handlePaste);
+    return () => window.removeEventListener("paste", handlePaste);
+  });
 
   const addText = () => {
     const { x, y } = center(); const s = snapRef.current; const id = uid();
@@ -400,6 +448,21 @@ export function BoardCanvas({ board, onUpdate }: BoardCanvasProps) {
             transformOrigin: "0 0", zIndex: 2,
           }}
         >
+          {selecting && (
+            <div
+              style={{
+                position: "absolute",
+                left: Math.min(selecting.bx0, selecting.bx1),
+                top: Math.min(selecting.by0, selecting.by1),
+                width: Math.abs(selecting.bx1 - selecting.bx0),
+                height: Math.abs(selecting.by1 - selecting.by0),
+                border: "1px dashed #3A82F6",
+                backgroundColor: "rgba(59, 130, 246, 0.1)",
+                zIndex: 9999, pointerEvents: "none"
+              }}
+            />
+          )}
+
           {/* SVG: connections + strokes */}
           <svg style={{ position: "absolute", top: 0, left: 0, width: BOARD_SIZE, height: BOARD_SIZE, pointerEvents: "none", overflow: "visible" }}>
             <defs>
