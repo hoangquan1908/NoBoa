@@ -1,0 +1,155 @@
+
+src/components/ui/calendar.tsx(23
+,9): error TS2353: Object 
+literal may only specify known 
+properties, and 'caption' does 
+not exist in type 
+'Partial<ClassNames>'.
+src/components/ui/calendar.tsx(63
+,9): error TS2353: Object 
+literal may only specify known 
+properties, and 'IconLeft' does 
+not exist in type 
+'Partial<CustomComponents>'.
+src/components/ui/calendar.tsx(63
+,22): error TS7031: Binding 
+element 'className' implicitly 
+has an 'any' type.
+src/components/ui/calendar.tsx(66
+,23): error TS7031: Binding 
+element 'className' implicitly 
+has an 'any' type.
+src/components/ui/chart.tsx(108,3
+): error TS2339: Property 
+'active' does not exist on type 
+'ClassAttributes<HTMLDivElement> 
+& HTMLAttributes<HTMLDivElement> 
+& { hideLabel?: boolean | 
+undefined; hideIndicator?: 
+boolean | undefined; indicator?: 
+"dashed" | ... 2 more ... | 
+undefined; nameKey?: string | 
+undefined; labelKey?: string | 
+undefined; }'.
+src/components/ui/chart.tsx(109,3
+): error TS2339: Property 
+'payload' does not exist on type 
+'ClassAttributes<HTMLDivElement> 
+& HTMLAttributes<HTMLDivElement> 
+& { hideLabel?: boolean | 
+undefined; hideIndicator?: 
+boolean | undefined; indicator?: 
+"dashed" | ... 2 more ... | 
+undefined; nameKey?: string | 
+undefined; labelKey?: string | 
+undefined; }'.
+src/components/ui/chart.tsx(114,3
+): error TS2339: Property 
+'label' does not exist on type 
+'ClassAttributes<HTMLDivElement> 
+& HTMLAttributes<HTMLDivElement> 
+& { hideLabel?: boolean | 
+undefined; hideIndicator?: 
+boolean | undefined; indicator?: 
+"dashed" | ... 2 more ... | 
+undefined; nameKey?: string | 
+undefined; labelKey?: string | 
+undefined; }'.
+src/components/ui/chart.tsx(115,3
+): error TS2339: Property 
+'labelFormatter' does not exist 
+on type 
+'ClassAttributes<HTMLDivElement> 
+& HTMLAttributes<HTMLDivElement> 
+& { hideLabel?: boolean | 
+undefined; hideIndicator?: 
+boolean | undefined; indicator?: 
+"dashed" | ... 2 more ... | 
+undefined; nameKey?: string | 
+undefined; labelKey?: string | 
+undefined; }'.
+src/components/ui/chart.tsx(116,3
+): error TS2339: Property 
+'labelClassName' does not exist 
+on type 
+'ClassAttributes<HTMLDivElement> 
+& HTMLAttributes<HTMLDivElement> 
+& { hideLabel?: boolean | 
+undefined; hideIndicator?: 
+boolean | undefined; indicator?: 
+"dashed" | ... 2 more ... | 
+undefined; nameKey?: string | 
+undefined; labelKey?: string | 
+undefined; }'.
+src/components/ui/chart.tsx(117,3
+): error TS2339: Property 
+'formatter' does not exist on 
+type 
+'ClassAttributes<HTMLDivElement> 
+& HTMLAttributes<HTMLDivElement> 
+& { hideLabel?: boolean | 
+undefined; hideIndicator?: 
+boolean | undefined; indicator?: 
+"dashed" | ... 2 more ... | 
+undefined; nameKey?: string | 
+undefined; labelKey?: string | 
+undefined; }'.
+src/components/ui/chart.tsx(121,2
+5): error TS2344: Type 'typeof 
+Tooltip' does not satisfy the 
+constraint 
+'JSXElementConstructor<any> | 
+keyof IntrinsicElements'.
+src/components/ui/chart.tsx(182,2
+3): error TS7006: Parameter 
+'item' implicitly has an 'any' 
+type.
+src/components/ui/chart.tsx(182,2
+9): error TS7006: Parameter 
+'index' implicitly has an 'any' 
+type.
+src/components/ui/form.tsx(14,8):
+ error TS2307: Cannot find 
+module 'react-hook-form' or its 
+corresponding type declarations.
+src/components/ui/input-otp.tsx(4
+7,61): error TS2339: Property 
+'slots' does not exist on type 
+'{}'.
+src/components/ui/resizable.tsx(1
+2,51): error TS2339: Property 
+'PanelGroup' does not exist on 
+type 'typeof import("E:/note-boar
+d-app/node_modules/react-resizabl
+e-panels/dist/react-resizable-pan
+els")'.
+src/components/ui/resizable.tsx(1
+4,25): error TS2339: Property 
+'PanelGroup' does not exist on 
+type 'typeof import("E:/note-boar
+d-app/node_modules/react-resizabl
+e-panels/dist/react-resizable-pan
+els")'.
+src/components/ui/resizable.tsx(3
+5,51): error TS2339: Property 
+'PanelResizeHandle' does not 
+exist on type 'typeof import("E:/
+note-board-app/node_modules/react
+-resizable-panels/dist/react-resi
+zable-panels")'.
+src/components/ui/resizable.tsx(3
+9,25): error TS2339: Property 
+'PanelResizeHandle' does not 
+exist on type 'typeof import("E:/
+note-board-app/node_modules/react
+-resizable-panels/dist/react-resi
+zable-panels")'.
+src/components/ui/resizable.tsx(5
+2,26): error TS2339: Property 
+'PanelResizeHandle' does not 
+exist on type 'typeof import("E:/
+note-board-app/node_modules/react
+-resizable-panels/dist/react-resi
+zable-panels")'.
+
+

@@ -1,0 +1,13 @@
+{
+  "name": "note-board-app",
+  "private": true,
+  "workspaces": [
+    "apps/*",
+    "packages/*"
+  ],
+  "scripts": {
+    "dev": "npm --workspace=@note-board-app/web run dev",
+    "build": "npm --workspace=@note-board-app/web run build",
+    "preview": "npm --workspace=@note-board-app/web run preview"
+  }
+}
