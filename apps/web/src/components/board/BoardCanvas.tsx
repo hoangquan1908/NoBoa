@@ -8,6 +8,7 @@ import { BoardToolbar } from "./BoardToolbar";
 import { BoardItemView } from "./items/StickyNoteItem";
 import { Minimap } from "./Minimap";
 import { Lightbox } from "./Lightbox";
+import { StickyNoteOverlay } from "./StickyNoteOverlay";
 
 interface BoardCanvasProps {
   board: Board;
@@ -32,10 +33,13 @@ export function BoardCanvas({ board, onUpdate }: BoardCanvasProps) {
   const [connectFrom, setConnectFrom] = useState<string | null>(null);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [lightbox, setLightbox] = useState<{ srcs: string[]; idx: number } | null>(null);
+  const [expandedStickyId, setExpandedStickyId] = useState<string | null>(null);
   const [urlOpen, setUrlOpen] = useState(false);
   const [urlVal, setUrlVal] = useState("");
   const [dragging, setDragging] = useState<{ ids: string[]; bx0: number; by0: number; initialPos: Record<string, {x: number, y: number}> } | null>(null);
   const [panning, setPanning] = useState<{ sx: number; sy: number; px0: number; py0: number } | null>(null);
+  const [spaceHeld, setSpaceHeld] = useState(false);
+  const spaceHeldRef = useRef(false);
   const [selecting, setSelecting] = useState<{ bx0: number; by0: number; bx1: number; by1: number } | null>(null);
   const [resizing, setResizing] = useState<{ id: string; bx0: number; by0: number; w0: number; h0: number } | null>(null);
   const [curStroke, setCurStroke] = useState<StrokePoint[] | null>(null);
@@ -51,7 +55,7 @@ export function BoardCanvas({ board, onUpdate }: BoardCanvasProps) {
 
   useEffect(() => {
     setPan({ x: 40, y: 40 }); setScale(1);
-    setSelectedIds(new Set()); setConnectFrom(null); setCurStroke(null); setEditingId(null);
+    setSelectedIds(new Set()); setConnectFrom(null); setCurStroke(null); setEditingId(null); setExpandedStickyId(null);
     isDrawing.current = false;
   }, [board.id]);
 
@@ -95,22 +99,38 @@ export function BoardCanvas({ board, onUpdate }: BoardCanvasProps) {
     });
   };
 
+  const isPanTrigger = useCallback((e: { button: number }) => {
+    return e.button === 1 || (e.button === 0 && spaceHeldRef.current);
+  }, []);
+
+  const startPan = useCallback((e: React.MouseEvent) => {
+    e.preventDefault();
+    setPanning({ sx: e.clientX, sy: e.clientY, px0: panRef.current.x, py0: panRef.current.y });
+  }, []);
+
   const handleWheel = useCallback((e: React.WheelEvent) => {
     e.preventDefault();
-    const rect = containerRef.current!.getBoundingClientRect();
-    const mx = e.clientX - rect.left, my = e.clientY - rect.top;
-    const f = e.deltaY < 0 ? 1.1 : 0.9;
-    setScale((s) => {
-      const ns = clamp(s * f, 0.15, 4);
-      setPan((p) => ({ x: mx - (mx - p.x) * (ns / s), y: my - (my - p.y) * (ns / s) }));
-      return ns;
-    });
+    if (e.ctrlKey || e.metaKey) {
+      const rect = containerRef.current!.getBoundingClientRect();
+      const mx = e.clientX - rect.left, my = e.clientY - rect.top;
+      const f = e.deltaY < 0 ? 1.1 : 0.9;
+      setScale((s) => {
+        const ns = clamp(s * f, 0.15, 4);
+        setPan((p) => ({ x: mx - (mx - p.x) * (ns / s), y: my - (my - p.y) * (ns / s) }));
+        return ns;
+      });
+      return;
+    }
+    setPan((p) => ({
+      x: p.x - (e.shiftKey ? e.deltaY : e.deltaX),
+      y: p.y - (e.shiftKey ? 0 : e.deltaY),
+    }));
   }, []);
 
   const handleBgDown = useCallback((e: React.MouseEvent) => {
-    if (e.button === 1) e.preventDefault(); // Stop browser auto-scroll compass
-    if ((e.button !== 0 && e.button !== 1) || tool === "draw" || tool === "erase") return;
-    if (e.button === 0 && tool === "text") {
+    if (isPanTrigger(e)) { startPan(e); return; }
+    if (e.button !== 0 || tool === "draw" || tool === "erase") return;
+    if (tool === "text") {
       const bp = toBoard(e.clientX, e.clientY);
       const s = snapRef.current;
       const item: TextItem = {
@@ -126,20 +146,28 @@ export function BoardCanvas({ board, onUpdate }: BoardCanvasProps) {
     }
     setSelectedIds(new Set());
     setConnectFrom(null);
-    if (e.button === 1 || tool !== "select") {
-      setPanning({ sx: e.clientX, sy: e.clientY, px0: panRef.current.x, py0: panRef.current.y });
-    } else {
+    if (tool === "select") {
       const bp = toBoard(e.clientX, e.clientY);
       setSelecting({ bx0: bp.x, by0: bp.y, bx1: bp.x, by1: bp.y });
     }
-  }, [tool, toBoard, pushSnap]);
+  }, [tool, toBoard, pushSnap, isPanTrigger, startPan]);
+
+  useEffect(() => {
+    if (!panning) return;
+    const onMove = (e: MouseEvent) => {
+      setPan({ x: panning.px0 + e.clientX - panning.sx, y: panning.py0 + e.clientY - panning.sy });
+    };
+    const onUp = () => setPanning(null);
+    window.addEventListener("mousemove", onMove);
+    window.addEventListener("mouseup", onUp);
+    return () => {
+      window.removeEventListener("mousemove", onMove);
+      window.removeEventListener("mouseup", onUp);
+    };
+  }, [panning]);
 
   const handleMouseMove = useCallback((e: React.MouseEvent) => {
-    const pan_ = panningRef.current;
-    if (pan_) {
-      setPan({ x: pan_.px0 + e.clientX - pan_.sx, y: pan_.py0 + e.clientY - pan_.sy });
-      return;
-    }
+    if (panningRef.current) return;
     const drag = draggingRef.current;
     if (drag) {
       const bp = toBoard(e.clientX, e.clientY);
@@ -183,17 +211,18 @@ export function BoardCanvas({ board, onUpdate }: BoardCanvasProps) {
   }, [toBoard, onUpdate, snapGrid]);
 
   const handleMouseUp = useCallback(() => {
-    if (panningRef.current) { setPanning(null); return; }
+    if (panningRef.current) return;
     if (selectingRef.current) { setSelecting(null); return; }
     if (draggingRef.current) { pushSnap(snapRef.current); setDragging(null); return; }
     if (resizingRef.current) { pushSnap(snapRef.current); setResizing(null); }
   }, [pushSnap]);
 
   const handleDrawDown = useCallback((e: React.MouseEvent) => {
+    if (isPanTrigger(e)) { startPan(e); return; }
     e.stopPropagation();
     isDrawing.current = true;
     setCurStroke([toBoard(e.clientX, e.clientY)]);
-  }, [toBoard]);
+  }, [toBoard, isPanTrigger, startPan]);
 
   const handleDrawMove = useCallback((e: React.MouseEvent) => {
     if (!isDrawing.current) return;
@@ -221,7 +250,7 @@ export function BoardCanvas({ board, onUpdate }: BoardCanvasProps) {
   }, [tool, drawColor, drawWidth, pushSnap]);
 
   const handleItemDown = useCallback((e: React.MouseEvent, id: string) => {
-    if (e.button === 1) e.preventDefault(); // bubble to bg
+    if (isPanTrigger(e)) { startPan(e); return; }
     if (e.button !== 0) return;
     e.stopPropagation();
     const item = snapRef.current.items.find((i) => i.id === id);
@@ -248,20 +277,34 @@ export function BoardCanvas({ board, onUpdate }: BoardCanvasProps) {
       snapRef.current.items.forEach(i => { if (fresh.has(i.id)) posMap[i.id] = {x:i.x, y:i.y}; });
       setDragging({ ids: Array.from(fresh), bx0: bp.x, by0: bp.y, initialPos: posMap });
     }
-  }, [tool, connectFrom, connColor, pushSnap, toBoard]);
+  }, [tool, connectFrom, connColor, pushSnap, toBoard, isPanTrigger, startPan]);
 
   const handleResizeDown = useCallback((e: React.MouseEvent, id: string) => {
+    if (isPanTrigger(e)) { startPan(e); return; }
     e.stopPropagation();
     const item = snapRef.current.items.find((i) => i.id === id);
     if (!item || item.type === "text") return;
     const bp = toBoard(e.clientX, e.clientY);
     setResizing({ id, bx0: bp.x, by0: bp.y, w0: (item as StickyItem | ImageItem).w, h0: (item as StickyItem | ImageItem).h });
-  }, [toBoard]);
+  }, [toBoard, isPanTrigger, startPan]);
 
-  // Keyboard shortcuts
+  const isTypingTarget = () => {
+    const el = document.activeElement;
+    return el instanceof HTMLInputElement || el instanceof HTMLTextAreaElement || (el as HTMLElement)?.isContentEditable;
+  };
+
+  // Keyboard shortcuts + Space-to-pan modifier
   useEffect(() => {
-    const onKey = (e: KeyboardEvent) => {
-      if (editingId) return;
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (e.code === "Space" && !editingId && !expandedStickyId && !isTypingTarget()) {
+        e.preventDefault();
+        if (!spaceHeldRef.current) {
+          spaceHeldRef.current = true;
+          setSpaceHeld(true);
+        }
+        return;
+      }
+      if (editingId || expandedStickyId) return;
       if ((e.ctrlKey || e.metaKey) && e.key === "z") { e.preventDefault(); e.shiftKey ? redo() : undo(); return; }
       if ((e.ctrlKey || e.metaKey) && e.key === "y") { e.preventDefault(); redo(); return; }
       if (e.key === "Escape") { setConnectFrom(null); setSelectedIds(new Set()); }
@@ -275,9 +318,26 @@ export function BoardCanvas({ board, onUpdate }: BoardCanvasProps) {
         setSelectedIds(new Set());
       }
     };
-    window.addEventListener("keydown", onKey);
-    return () => window.removeEventListener("keydown", onKey);
-  }, [editingId, selectedIds, undo, redo, pushSnap]);
+    const onKeyUp = (e: KeyboardEvent) => {
+      if (e.code === "Space") {
+        spaceHeldRef.current = false;
+        setSpaceHeld(false);
+        if (panningRef.current) setPanning(null);
+      }
+    };
+    const onBlur = () => {
+      spaceHeldRef.current = false;
+      setSpaceHeld(false);
+    };
+    window.addEventListener("keydown", onKeyDown);
+    window.addEventListener("keyup", onKeyUp);
+    window.addEventListener("blur", onBlur);
+    return () => {
+      window.removeEventListener("keydown", onKeyDown);
+      window.removeEventListener("keyup", onKeyUp);
+      window.removeEventListener("blur", onBlur);
+    };
+  }, [editingId, expandedStickyId, selectedIds, undo, redo, pushSnap]);
 
   // Center helper
   const center = () => {
@@ -370,6 +430,9 @@ export function BoardCanvas({ board, onUpdate }: BoardCanvasProps) {
 
   const snap = board.snapshot;
   const imgSrcs = snap.items.filter((i) => i.type === "image").map((i) => (i as ImageItem).src);
+  const expandedSticky = expandedStickyId
+    ? (snap.items.find((i) => i.id === expandedStickyId && i.type === "sticky") as StickyItem | undefined)
+    : undefined;
 
   const connPath = (conn: Connection) => {
     const a = snap.items.find((i) => i.id === conn.fromId);
@@ -417,12 +480,17 @@ export function BoardCanvas({ board, onUpdate }: BoardCanvasProps) {
         className="flex-1 relative overflow-hidden select-none"
         style={{
           background: "#EAE4DA",
-          cursor: panning ? "grabbing" : dragging ? "grabbing" : tool === "select" ? "default" : tool === "connect" ? "crosshair" : "default",
+          cursor: panning ? "grabbing"
+            : spaceHeld ? "grab"
+            : dragging ? "grabbing"
+            : tool === "connect" ? "crosshair"
+            : "default",
         }}
         onWheel={handleWheel}
         onMouseMove={handleMouseMove}
         onMouseUp={handleMouseUp}
-        onMouseLeave={handleMouseUp}
+        onMouseLeave={() => { if (!panningRef.current) handleMouseUp(); }}
+        onAuxClick={(e) => { if (e.button === 1) e.preventDefault(); }}
       >
         {/* Dot grid */}
         <svg className="absolute inset-0 w-full h-full pointer-events-none" style={{ zIndex: 0 }}>
@@ -512,6 +580,7 @@ export function BoardCanvas({ board, onUpdate }: BoardCanvasProps) {
               tool={tool} connectFrom={connectFrom}
               onMouseDown={handleItemDown} onResizeDown={handleResizeDown}
               onDoubleClick={(id) => tool === "select" && setEditingId(id)}
+              onExpandSticky={(id) => setExpandedStickyId(id)}
               onBlurEdit={() => setEditingId(null)}
               onUpdate={updateItem} onDelete={deleteItem} onToggleLock={toggleLock}
               onOpenLightbox={(src) => {
@@ -526,7 +595,10 @@ export function BoardCanvas({ board, onUpdate }: BoardCanvasProps) {
         {(tool === "draw" || tool === "erase") && (
           <div
             className="absolute inset-0"
-            style={{ zIndex: 100, cursor: tool === "erase" ? "cell" : "crosshair" }}
+            style={{
+              zIndex: 100,
+              cursor: panning ? "grabbing" : spaceHeld ? "grab" : tool === "erase" ? "cell" : "crosshair",
+            }}
             onMouseDown={handleDrawDown}
             onMouseMove={handleDrawMove}
             onMouseUp={handleDrawUp}
@@ -554,6 +626,15 @@ export function BoardCanvas({ board, onUpdate }: BoardCanvasProps) {
             onClose={() => setLightbox(null)}
             onPrev={() => setLightbox((l) => l ? { ...l, idx: (l.idx - 1 + l.srcs.length) % l.srcs.length } : null)}
             onNext={() => setLightbox((l) => l ? { ...l, idx: (l.idx + 1) % l.srcs.length } : null)}
+          />
+        )}
+
+        {/* Sticky note expanded editor */}
+        {expandedSticky && (
+          <StickyNoteOverlay
+            sticky={expandedSticky}
+            onClose={() => setExpandedStickyId(null)}
+            onUpdate={(text) => updateItem(expandedSticky.id, { text } as Partial<BoardItem>)}
           />
         )}
       </div>

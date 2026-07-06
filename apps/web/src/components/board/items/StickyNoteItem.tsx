@@ -14,6 +14,7 @@ interface BoardItemViewProps {
   onMouseDown: (e: React.MouseEvent, id: string) => void;
   onResizeDown: (e: React.MouseEvent, id: string) => void;
   onDoubleClick: (id: string) => void;
+  onExpandSticky: (id: string) => void;
   onBlurEdit: () => void;
   onUpdate: (id: string, upd: Partial<BoardItem>) => void;
   onDelete: (id: string) => void;
@@ -23,7 +24,7 @@ interface BoardItemViewProps {
 
 export function BoardItemView({
   item, selected, editing, tool, connectFrom,
-  onMouseDown, onResizeDown, onDoubleClick, onBlurEdit,
+  onMouseDown, onResizeDown, onDoubleClick, onExpandSticky, onBlurEdit,
   onUpdate, onDelete, onToggleLock, onOpenLightbox,
 }: BoardItemViewProps) {
   const [showPicker, setShowPicker] = useState(false);
@@ -55,7 +56,7 @@ export function BoardItemView({
         style={{ ...style, width: sticky.w, height: sticky.h, background: sticky.color }}
         className={`rounded shadow-md flex flex-col overflow-visible select-none ${selRing}`}
         onMouseDown={(e) => onMouseDown(e, item.id)}
-        onDoubleClick={() => !item.locked && onDoubleClick(item.id)}
+        onDoubleClick={() => !item.locked && onExpandSticky(item.id)}
       >
         {/* Controls */}
         <div className="absolute top-0 right-0 left-0 flex items-center justify-end gap-0.5 px-1.5 pt-1.5 opacity-0 hover:opacity-100 transition-opacity z-10">
@@ -112,21 +113,9 @@ export function BoardItemView({
 
         {/* Content */}
         <div className="flex-1 p-2.5 pt-6 overflow-hidden">
-          {editing ? (
-            <textarea
-              autoFocus
-              value={sticky.text}
-              onChange={(e) => onUpdate(item.id, { text: e.target.value } as any)}
-              onBlur={onBlurEdit}
-              onMouseDown={(e) => e.stopPropagation()}
-              className="w-full h-full resize-none bg-transparent text-sm outline-none leading-relaxed"
-              style={{ fontFamily: "inherit" }}
-            />
-          ) : (
-            <p className="text-sm whitespace-pre-wrap break-words leading-relaxed text-gray-800">
-              {sticky.text}
-            </p>
-          )}
+          <p className="text-sm whitespace-pre-wrap break-words leading-relaxed text-gray-800">
+            {sticky.text || <span className="text-gray-500/70 italic">Nhấp đúp để chỉnh sửa...</span>}
+          </p>
         </div>
 
         {/* Resize handle */}
