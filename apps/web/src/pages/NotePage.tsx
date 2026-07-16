@@ -9,11 +9,11 @@ import { BoardCanvas } from "../components/board/BoardCanvas";
 interface NoteViewProps {
   note: Note;
   onUpdate: (n: Note) => void;
+  isHeaderExpanded: boolean;
 }
 
-export function NoteView({ note, onUpdate }: NoteViewProps) {
+export function NoteView({ note, onUpdate, isHeaderExpanded }: NoteViewProps) {
   const [tab, setTab] = useState<"todo" | "board">("todo");
-  const [isHeaderExpanded, setIsHeaderExpanded] = useState(true);
   const [renamingBoard, setRenamingBoard] = useState<string | null>(null);
   const [boardRenameVal, setBoardRenameVal] = useState("");
   const [renamingNote, setRenamingNote] = useState(false);
@@ -54,47 +54,40 @@ export function NoteView({ note, onUpdate }: NoteViewProps) {
 
   return (
     <div className="flex flex-col h-full overflow-hidden">
-      {/* Note header */}
-      <div className="flex items-center gap-3 px-5 py-3 border-b border-border flex-shrink-0 bg-card/50">
-        {renamingNote ? (
-          <input
-            autoFocus
-            value={noteTitle}
-            onChange={(e) => setNoteTitle(e.target.value)}
-            onBlur={commitNoteRename}
-            onKeyDown={(e) => {
-              if (e.key === "Enter") commitNoteRename();
-              if (e.key === "Escape") { setNoteTitle(note.title); setRenamingNote(false); }
-            }}
-            className="flex-1 text-base font-semibold bg-transparent outline-none border-b-2 border-primary/40"
-          />
-        ) : (
-          <h2
-            className="flex-1 text-base font-semibold truncate cursor-pointer hover:text-primary/80 transition-all"
-            title="Double-click to rename"
-            onDoubleClick={() => { setNoteTitle(note.title); setRenamingNote(true); }}
-          >
-            {note.title}
-          </h2>
-        )}
-        <div className="flex items-center gap-2">
-          {pending > 0 && (
-            <span className="text-xs text-muted-foreground flex-shrink-0">
-              {pending} pending tasks
-            </span>
-          )}
-          <button
-            onClick={() => setIsHeaderExpanded((p) => !p)}
-            className="p-1 rounded text-muted-foreground hover:bg-muted/60 hover:text-foreground transition-all"
-            title={isHeaderExpanded ? "Collapse header" : "Expand header"}
-          >
-            {isHeaderExpanded ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
-          </button>
-        </div>
-      </div>
-
       {isHeaderExpanded && (
         <>
+          {/* Note header */}
+          <div className="flex items-center gap-3 px-5 py-3 border-b border-border flex-shrink-0 bg-card/50">
+            {renamingNote ? (
+              <input
+                autoFocus
+                value={noteTitle}
+                onChange={(e) => setNoteTitle(e.target.value)}
+                onBlur={commitNoteRename}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") commitNoteRename();
+                  if (e.key === "Escape") { setNoteTitle(note.title); setRenamingNote(false); }
+                }}
+                className="flex-1 text-base font-semibold bg-transparent outline-none border-b-2 border-primary/40"
+              />
+            ) : (
+              <h2
+                className="flex-1 text-base font-semibold truncate cursor-pointer hover:text-primary/80 transition-all"
+                title="Double-click to rename"
+                onDoubleClick={() => { setNoteTitle(note.title); setRenamingNote(true); }}
+              >
+                {note.title}
+              </h2>
+            )}
+            <div className="flex items-center gap-2">
+              {pending > 0 && (
+                <span className="text-xs text-muted-foreground flex-shrink-0">
+                  {pending} pending tasks
+                </span>
+              )}
+            </div>
+          </div>
+
           {/* Tabs */}
           <div className="flex items-center border-b border-border px-4 gap-0 flex-shrink-0 bg-card/30">
             {([

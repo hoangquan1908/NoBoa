@@ -2,16 +2,17 @@ import { useState } from "react";
 import { Plus, Check, ChevronDown, ChevronRight } from "lucide-react";
 import { Note } from "../../types/note.types";
 import { TaskRow } from "./TaskItem";
-import { uid } from "../../lib/utils";
+import { useNotesStore } from "../../store/notesStore";
 
 type TaskFilter = "all" | "todo" | "done";
 
 interface TodoPanelProps {
   note: Note;
-  onUpdate: (n: Note) => void;
+  onUpdate: (n: Note) => void; // kept for board/title updates from NoteView
 }
 
-export function TodoPanel({ note, onUpdate }: TodoPanelProps) {
+export function TodoPanel({ note }: TodoPanelProps) {
+  const { addTask, toggleTask, deleteTask, editTask } = useNotesStore();
   const [newText, setNewText] = useState("");
   const [filterMode, setFilterMode] = useState<TaskFilter>("all");
   const [doneOpen, setDoneOpen] = useState(true);
@@ -24,27 +25,9 @@ export function TodoPanel({ note, onUpdate }: TodoPanelProps) {
 
   const add = () => {
     if (!newText.trim()) return;
-    onUpdate({
-      ...note,
-      tasks: [...tasks, { id: uid(), text: newText.trim(), done: false }],
-    });
+    addTask(note.id, newText.trim());
     setNewText("");
   };
-
-  const toggle = (id: string) =>
-    onUpdate({
-      ...note,
-      tasks: tasks.map((t) => (t.id === id ? { ...t, done: !t.done } : t)),
-    });
-
-  const del = (id: string) =>
-    onUpdate({ ...note, tasks: tasks.filter((t) => t.id !== id) });
-
-  const edit = (id: string, text: string) =>
-    onUpdate({
-      ...note,
-      tasks: tasks.map((t) => (t.id === id ? { ...t, text } : t)),
-    });
 
   const visibleTodo = filterMode === "done" ? [] : pending;
   const visibleDone = filterMode === "todo" ? [] : doneList;
@@ -112,7 +95,13 @@ export function TodoPanel({ note, onUpdate }: TodoPanelProps) {
               </p>
             )}
             {visibleTodo.map((t) => (
-              <TaskRow key={t.id} task={t} onToggle={toggle} onDelete={del} onEdit={edit} />
+              <TaskRow
+                key={t.id}
+                task={t}
+                onToggle={(id) => toggleTask(note.id, id)}
+                onDelete={(id) => deleteTask(note.id, id)}
+                onEdit={(id, text) => editTask(note.id, id, text)}
+              />
             ))}
           </div>
         )}
@@ -128,7 +117,13 @@ export function TodoPanel({ note, onUpdate }: TodoPanelProps) {
             </button>
             {doneOpen &&
               visibleDone.map((t) => (
-                <TaskRow key={t.id} task={t} onToggle={toggle} onDelete={del} onEdit={edit} />
+                <TaskRow
+                  key={t.id}
+                  task={t}
+                  onToggle={(id) => toggleTask(note.id, id)}
+                  onDelete={(id) => deleteTask(note.id, id)}
+                  onEdit={(id, text) => editTask(note.id, id, text)}
+                />
               ))}
           </div>
         )}
