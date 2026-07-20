@@ -112,3 +112,8 @@ dist
 
 # Ignore template
 front-end-template/
+
+# Local specs, reports, and planning docs
+ROADMAP.md 
+SRS-NoteBoardApp.md
+structure.md 
