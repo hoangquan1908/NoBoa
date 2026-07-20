@@ -2,7 +2,7 @@ import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import { supabase } from '../lib/supabaseClient';
 import type { Note, Task } from '../types/note.types';
-import { makeBoard } from '../lib/utils';
+import { makeBoard, makeBoardStub } from '../lib/utils';
 
 // uuid fallback
 function generateId() {
@@ -36,14 +36,17 @@ interface NotesState {
 // ================================================================
 // HELPER
 // ================================================================
-function rowToNote(row: { id: string; title: string; created_at: string; updated_at: string }): Note {
-  const defaultBoard = makeBoard('Main Board');
+import { listBoardsForNote, createBoardRemote } from '../lib/supabaseBoardSync';
+
+async function rowToNote(row: { id: string; title: string; created_at: string; updated_at: string }): Promise<Note> {
+  const boardStubs = await listBoardsForNote(row.id);
+  const boards = boardStubs.map((b) => makeBoardStub(b.id, b.name));
   return {
     id: row.id,
     title: row.title,
     tasks: [],
-    boards: [defaultBoard],
-    activeBoardId: defaultBoard.id,
+    boards,
+    activeBoardId: boards[0].id,
     created_at: row.created_at,
     updated_at: row.updated_at,
   };
@@ -95,8 +98,17 @@ export const useNotesStore = create<NotesState>()(
           .in('note_id', noteIds)
           .order('position', { ascending: true });
 
-        const notes: Note[] = notesData.map((row) => {
-          const defaultBoard = makeBoard('Main Board');
+        // Lấy board (id + name) đã tồn tại cho TẤT CẢ note trong 1 lần
+        // query, thay vì tạo board mới ngẫu nhiên mỗi lần fetch — giữ id
+        // ổn định để IndexedDB/Supabase board data khớp lại được.
+        const { data: boardsData, error: boardsErr } = await supabase
+          .from('boards')
+          .select('id, name, note_id')
+          .in('note_id', noteIds)
+          .order('created_at', { ascending: true });
+        if (boardsErr) console.error('[notesStore] fetch boards error:', boardsErr.message);
+
+        const notes: Note[] = await Promise.all(notesData.map(async (row) => {
           const tasks: Task[] = (tasksData ?? [])
             .filter((t) => t.note_id === row.id)
             .map((t) => ({
@@ -107,16 +119,27 @@ export const useNotesStore = create<NotesState>()(
               created_at: t.created_at,
             }));
 
+          let noteBoards = (boardsData ?? [])
+            .filter((b) => b.note_id === row.id)
+            .map((b) => makeBoardStub(b.id, b.name));
+
+          // Note chưa có board nào (trường hợp hiếm, ví dụ note tạo trước
+          // khi tính năng board tồn tại) -> tạo 1 board mặc định trên Supabase.
+          if (noteBoards.length === 0) {
+            const stub = await createBoardRemote(row.id, 'Main Board');
+            noteBoards = [makeBoardStub(stub.id, stub.name)];
+          }
+
           return {
             id: row.id,
             title: row.title,
             tasks,
-            boards: [defaultBoard],
-            activeBoardId: defaultBoard.id,
+            boards: noteBoards,
+            activeBoardId: noteBoards[0].id,
             created_at: row.created_at,
             updated_at: row.updated_at,
           };
-        });
+        }));
 
         // Merge logic: in a real app, maybe upload local notes to Supabase if they exist.
         // For now, Supabase overwrites local state on login.
@@ -154,7 +177,7 @@ export const useNotesStore = create<NotesState>()(
           return;
         }
 
-        const note = rowToNote(data);
+        const note = await rowToNote(data);
         set((s) => ({
           notes: [...s.notes, note],
           activeId: note.id,

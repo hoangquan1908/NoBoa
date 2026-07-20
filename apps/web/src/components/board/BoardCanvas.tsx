@@ -26,7 +26,7 @@ export function BoardCanvas({ board, onUpdate }: BoardCanvasProps) {
   // ── Store ──────────────────────────────────────────────────────
   const store = useBoardStore;
   const {
-    loadBoard, pushSnap,
+    loadBoard, loadBoardFromCache, pushSnap,
     tool, setTool,
     drawColor, setDrawColor,
     drawWidth, setDrawWidth,
@@ -53,6 +53,10 @@ export function BoardCanvas({ board, onUpdate }: BoardCanvasProps) {
   // ── Load board into store on mount / id change ─────────────────
   useEffect(() => {
     loadBoard(board);
+    // Ưu tiên bản đã lưu trong IndexedDB nếu có (ví dụ thay đổi từ
+    // phiên trước chưa kịp đồng bộ lên Supabase) — chạy sau khi state
+    // "sạch" đã set, nên nếu cache có dữ liệu mới hơn sẽ ghi đè.
+    loadBoardFromCache(board.id);
   }, [board.id]); // eslint-disable-line
 
   // ── Propagate store changes back to parent (for notesStore) ───

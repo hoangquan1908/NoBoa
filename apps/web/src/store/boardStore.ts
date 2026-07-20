@@ -7,6 +7,34 @@ import {
   uid, clamp, DRAW_COLORS, DRAW_WIDTHS, CONN_COLORS,
   emptySnap, itemCenter,
 } from '../lib/utils';
+import { getBoard as getCachedBoard, saveBoard, enqueueSync } from '../lib/indexedDb';
+import { fetchBoardFromSupabase } from '../lib/supabaseBoardSync';
+
+// ================================================================
+// LOCAL-FIRST PERSISTENCE (Giai đoạn 2)
+// ================================================================
+// Mỗi lần snapshot của board thay đổi (pushSnap/undo/redo), ta ghi
+// ngay xuống IndexedDB (đồng bộ với state, không debounce — vì ghi
+// IndexedDB rất rẻ) và đẩy 1 bản ghi vào sync_queue (debounce nhẹ,
+// để không enqueue liên tục khi user đang kéo/vẽ dồn dập). Việc gửi
+// sync_queue lên Supabase thực sự sẽ do useSupabaseSync xử lý ở
+// Giai đoạn 3 — ở đây chỉ chuẩn bị dữ liệu.
+
+let syncDebounceTimer: ReturnType<typeof setTimeout> | null = null;
+const SYNC_DEBOUNCE_MS = 1500;
+
+function persistBoard(board: Board) {
+  // Ghi cache local ngay lập tức — đảm bảo reload trang không mất dữ liệu.
+  saveBoard(board).catch((err) => console.error('[boardStore] saveBoard failed:', err));
+
+  // Debounce việc đẩy vào sync_queue để tránh spam khi vẽ/kéo liên tục.
+  if (syncDebounceTimer) clearTimeout(syncDebounceTimer);
+  syncDebounceTimer = setTimeout(() => {
+    enqueueSync(board.id, board).catch((err) =>
+      console.error('[boardStore] enqueueSync failed:', err)
+    );
+  }, SYNC_DEBOUNCE_MS);
+}
 
 // ================================================================
 // TYPES
@@ -36,6 +64,7 @@ export interface BoardState {
 
   // Actions — board lifecycle
   loadBoard: (board: Board) => void;
+  loadBoardFromCache: (boardId: string) => Promise<void>;
   resetBoard: () => void;
 
   // Actions — history
@@ -123,29 +152,66 @@ export const useBoardStore = create<BoardState>((set, get) => ({
       curStroke: null,
       tool: 'select',
     });
+    // Board mới (chưa có trong cache) → ghi ngay để có bản local đầu tiên.
+    persistBoard(board);
   },
 
-  resetBoard: () => set({ board: null }),
+  // Gọi sau loadBoard() khi màn hình board mount, để ưu tiên dữ liệu
+  // đã lưu trong IndexedDB (ví dụ: có thay đổi chưa kịp đồng bộ lên
+  // Supabase từ phiên trước) thay vì bản "sạch" truyền từ ngoài vào.
+  // Nếu không có cache local (ví dụ mở lần đầu trên thiết bị mới),
+  // fallback sang fetch từ Supabase.
+  loadBoardFromCache: async (boardId) => {
+    try {
+      const cached = await getCachedBoard(boardId);
+      const current = get().board;
+      if (cached) {
+        if (current?.id !== boardId) return; // user đã chuyển board khác
+        set({ board: cached });
+        return;
+      }
+      // Không có cache local -> thử tải từ Supabase (đa thiết bị).
+      const boardName = current?.name ?? 'Untitled Board';
+      const remote = await fetchBoardFromSupabase(boardId, boardName);
+      if (remote && get().board?.id === boardId) {
+        set({ board: remote });
+        saveBoard(remote).catch(() => {}); // cache lại local cho lần sau
+      }
+    } catch (err) {
+      console.error('[boardStore] loadBoardFromCache failed:', err);
+    }
+  },
+
+  resetBoard: () => {
+    if (syncDebounceTimer) { clearTimeout(syncDebounceTimer); syncDebounceTimer = null; }
+    set({ board: null });
+  },
 
   // ── History ───────────────────────────────────────────────────
   pushSnap: (snap) => {
     const b = get().board;
     if (!b) return;
-    set({ board: applyHistory(b, snap) });
+    const next = applyHistory(b, snap);
+    set({ board: next });
+    persistBoard(next);
   },
 
   undo: () => {
     const b = get().board;
     if (!b || b.historyIndex <= 0) return;
     const idx = b.historyIndex - 1;
-    set({ board: { ...b, snapshot: b.history[idx], historyIndex: idx } });
+    const next = { ...b, snapshot: b.history[idx], historyIndex: idx };
+    set({ board: next });
+    persistBoard(next);
   },
 
   redo: () => {
     const b = get().board;
     if (!b || b.historyIndex >= b.history.length - 1) return;
     const idx = b.historyIndex + 1;
-    set({ board: { ...b, snapshot: b.history[idx], historyIndex: idx } });
+    const next = { ...b, snapshot: b.history[idx], historyIndex: idx };
+    set({ board: next });
+    persistBoard(next);
   },
 
   // ── Items ─────────────────────────────────────────────────────

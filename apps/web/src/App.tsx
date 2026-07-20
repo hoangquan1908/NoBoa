@@ -4,6 +4,7 @@ import { useNotesStore } from "./store/notesStore";
 import { useAuthStore } from "./store/authStore";
 import { NoteView } from "./pages/NotePage";
 import { AuthPage } from "./pages/AuthPage";
+import { useSupabaseSync } from "./hooks/useSupabaseSync";
 
 export default function App() {
   const { user, loading: authLoading, initialize, signOut } = useAuthStore();
@@ -19,6 +20,10 @@ export default function App() {
     updateNote,
     renameNote,
   } = useNotesStore();
+
+  // Worker đồng bộ board nền — chỉ chạy khi đã đăng nhập (board của
+  // user chưa đăng nhập chỉ tồn tại local, không có nơi để đồng bộ lên).
+  useSupabaseSync(!authLoading && !!user);
 
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [showAuthModal, setShowAuthModal] = useState(false);

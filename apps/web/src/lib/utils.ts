@@ -38,6 +38,14 @@ export function makeBoard(name: string): Board {
   return { id: uid(), name, snapshot: s, history: [s], historyIndex: 0 };
 }
 
+// Giống makeBoard, nhưng dùng id đã có sẵn (ví dụ từ bảng `boards` trên
+// Supabase) thay vì tự sinh id mới — nội dung thật (items/strokes/links)
+// sẽ được BoardCanvas.loadBoardFromCache hydrate sau khi board được mở.
+export function makeBoardStub(id: string, name: string): Board {
+  const s = emptySnap();
+  return { id, name, snapshot: s, history: [s], historyIndex: 0 };
+}
+
 export function makeNote(title: string): Note {
   const b = makeBoard("Main Board");
   return { id: uid(), title, tasks: [], boards: [b], activeBoardId: b.id };

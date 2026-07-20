@@ -2,7 +2,9 @@ import { useState, useEffect } from "react";
 import { Plus, X, List, LayoutGrid, ChevronUp, ChevronDown } from "lucide-react";
 import { Note } from "../types/note.types";
 import { Board } from "../types/board.types";
-import { makeBoard } from "../lib/utils";
+import { makeBoardStub } from "../lib/utils";
+import { createBoardRemote, renameBoardRemote, deleteBoardRemote } from "../lib/supabaseBoardSync";
+import { deleteBoard as deleteBoardCache } from "../lib/indexedDb";
 import { TodoPanel } from "../components/todo/TaskList";
 import { BoardCanvas } from "../components/board/BoardCanvas";
 
@@ -24,12 +26,24 @@ export function NoteView({ note, onUpdate, isHeaderExpanded }: NoteViewProps) {
   const activeBoard = note.boards.find((b) => b.id === note.activeBoardId) ?? note.boards[0];
   const pending = note.tasks.filter((t) => !t.done).length;
 
-  const addBoard = () => {
-    const b = makeBoard(`Board ${note.boards.length + 1}`);
-    onUpdate({ ...note, boards: [...note.boards, b], activeBoardId: b.id });
+  const addBoard = async () => {
+    const name = `Board ${note.boards.length + 1}`;
+    try {
+      // Tạo trên Supabase trước để có id ổn định ngay từ đầu, tránh
+      // trường hợp id local (uid()) không khớp với id thật trên server.
+      const remote = await createBoardRemote(note.id, name);
+      const b = makeBoardStub(remote.id, remote.name);
+      onUpdate({ ...note, boards: [...note.boards, b], activeBoardId: b.id });
+    } catch (err) {
+      console.error('[NotePage] addBoard failed:', err);
+      // Fallback: vẫn tạo local để không chặn UX khi mất mạng; board này
+      // sẽ không có trên Supabase cho tới khi user thử lại có mạng.
+      const b = makeBoardStub(crypto.randomUUID(), name);
+      onUpdate({ ...note, boards: [...note.boards, b], activeBoardId: b.id });
+    }
   };
 
-  const deleteBoard = (id: string) => {
+  const deleteBoard = async (id: string) => {
     if (note.boards.length <= 1) return;
     const boards = note.boards.filter((b) => b.id !== id);
     onUpdate({
@@ -37,11 +51,23 @@ export function NoteView({ note, onUpdate, isHeaderExpanded }: NoteViewProps) {
       boards,
       activeBoardId: note.activeBoardId === id ? boards[0].id : note.activeBoardId,
     });
+    // Dọn cache local + xoá trên Supabase (cascade tự xoá items/links/strokes).
+    deleteBoardCache(id).catch((err) => console.error('[NotePage] clear board cache failed:', err));
+    try {
+      await deleteBoardRemote(id);
+    } catch (err) {
+      console.error('[NotePage] deleteBoard remote failed:', err);
+    }
   };
 
-  const renameBoard = (id: string, name: string) => {
+  const renameBoard = async (id: string, name: string) => {
     if (!name.trim()) return;
     onUpdate({ ...note, boards: note.boards.map((b) => b.id === id ? { ...b, name: name.trim() } : b) });
+    try {
+      await renameBoardRemote(id, name.trim());
+    } catch (err) {
+      console.error('[NotePage] renameBoard remote failed:', err);
+    }
   };
 
   const updateBoard = (b: Board) =>
