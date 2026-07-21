@@ -7,7 +7,7 @@ import {
   uid, clamp, DRAW_COLORS, DRAW_WIDTHS, CONN_COLORS,
   emptySnap, itemCenter,
 } from '../lib/utils';
-import { getBoard as getCachedBoard, saveBoard, enqueueSync } from '../lib/indexedDb';
+import { getBoard as getCachedBoard, saveBoard, enqueueSync } from '../lib/localStore';
 import { fetchBoardFromSupabase } from '../lib/supabaseBoardSync';
 
 // ================================================================

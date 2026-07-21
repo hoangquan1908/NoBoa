@@ -3,7 +3,7 @@ import { describe, it, expect, beforeEach, vi } from 'vitest';
 // boardStore ghi xuống IndexedDB (qua lib/indexedDb) mỗi khi state đổi —
 // mock lại các hàm này để test chạy được trong môi trường Node (vitest),
 // nơi không có IndexedDB thật.
-vi.mock('../lib/indexedDb', () => ({
+vi.mock('../lib/localStore', () => ({
   saveBoard: vi.fn().mockResolvedValue(undefined),
   getBoard: vi.fn().mockResolvedValue(undefined),
   enqueueSync: vi.fn().mockResolvedValue(undefined),

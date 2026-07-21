@@ -10,6 +10,7 @@
     "@supabase/supabase-js": "^2.45.1"
   },
   "devDependencies": {
+    "@react-native-async-storage/async-storage": "^2.2.0",
     "vitest": "^2.0.0"
   },
   "scripts": {
