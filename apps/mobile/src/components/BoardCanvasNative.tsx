@@ -10,13 +10,21 @@ import Animated, {
   useAnimatedStyle,
   withSpring,
 } from 'react-native-reanimated';
-import { Canvas, Path, Box, BoxShadow, rrect, rect } from '@shopify/react-native-skia';
+import { Canvas, Path, Box, BoxShadow, rrect, rect, Skia } from '@shopify/react-native-skia';
 import { useBoardStore } from '@note-board-app/shared';
 // Cần import type nếu cần
 // import type { Board } from '@note-board-app/shared';
 
 // Giả lập 1 board để load
 const MOCK_BOARD_ID = 'mobile-board-1';
+
+function pointsToSkiaPath(points: { x: number; y: number }[]) {
+  const path = Skia.Path.Make();
+  if (points.length === 0) return path;
+  path.moveTo(points[0].x, points[0].y);
+  for (let i = 1; i < points.length; i++) path.lineTo(points[i].x, points[i].y);
+  return path;
+}
 
 export function BoardCanvasNative() {
   const store = useBoardStore();
@@ -41,18 +49,29 @@ export function BoardCanvasNative() {
 
   // Gesture cho viewport (Pan + Zoom)
   const scale = useSharedValue(1);
+  const savedScale = useSharedValue(1);
+  
   const translateX = useSharedValue(0);
   const translateY = useSharedValue(0);
+  const savedTranslateX = useSharedValue(0);
+  const savedTranslateY = useSharedValue(0);
 
   const pinch = Gesture.Pinch()
     .onUpdate((e) => {
-      scale.value = e.scale;
+      scale.value = savedScale.value * e.scale;
+    })
+    .onEnd(() => {
+      savedScale.value = scale.value;
     });
 
   const pan = Gesture.Pan()
     .onUpdate((e) => {
-      translateX.value = e.translationX;
-      translateY.value = e.translationY;
+      translateX.value = savedTranslateX.value + e.translationX;
+      translateY.value = savedTranslateY.value + e.translationY;
+    })
+    .onEnd(() => {
+      savedTranslateX.value = translateX.value;
+      savedTranslateY.value = translateY.value;
     });
 
   const composed = Gesture.Simultaneous(pinch, pan);
@@ -74,7 +93,7 @@ export function BoardCanvasNative() {
           <Canvas style={styles.skiaCanvas}>
             {/* TODO: Tái tạo StringLinks.tsx và DrawingLayer.tsx từ web sang đây dùng Canvas/Path của Skia */}
             {store.board?.snapshot.strokes?.map((stroke, index) => {
-              const pathData = ""; // Giả định sinh ra chuỗi SVG path từ stroke.points
+              const pathData = pointsToSkiaPath(stroke.points);
               return (
                 <Path
                   key={stroke.id || index}
@@ -98,8 +117,8 @@ export function BoardCanvasNative() {
                     position: 'absolute',
                     left: item.x,
                     top: item.y,
-                    width: 200, 
-                    height: 200,
+                    width: 'w' in item ? item.w : 200, 
+                    height: 'h' in item ? item.h : 'auto' as any,
                     backgroundColor: ('color' in item ? item.color : undefined) || '#FDE68A',
                     padding: 10,
                     borderRadius: 8,
