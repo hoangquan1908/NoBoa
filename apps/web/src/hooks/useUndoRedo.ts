@@ -1,5 +1,5 @@
 import { useEffect } from 'react';
-import { useBoardStore } from '../store/boardStore';
+import { useBoardStore } from '@note-board-app/shared';
 
 /**
  * useUndoRedo — binds keyboard shortcuts Ctrl+Z / Ctrl+Y / Ctrl+Shift+Z

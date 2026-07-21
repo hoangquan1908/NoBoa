@@ -1,6 +1,6 @@
 import { useCallback, useRef } from 'react';
-import type { BoardItem, ImageItem, StickyItem } from '../types/board.types';
-import { useBoardStore } from '../store/boardStore';
+import type { BoardItem, ImageItem, StickyItem } from '@note-board-app/shared';
+import { useBoardStore } from '@note-board-app/shared';
 
 /**
  * useDrag — manages item drag, marquee-select, and resize gestures.

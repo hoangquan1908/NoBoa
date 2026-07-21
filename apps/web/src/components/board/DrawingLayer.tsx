@@ -1,5 +1,5 @@
-import type { Stroke, StrokePoint } from '../../types/board.types';
-import { ptToPath } from '../../lib/utils';
+import type { Stroke, StrokePoint } from '@note-board-app/shared';
+import { ptToPath } from '@note-board-app/shared';
 
 interface DrawingLayerProps {
   /** Committed strokes from board snapshot */

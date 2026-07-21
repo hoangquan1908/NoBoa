@@ -1,8 +1,8 @@
 import { useState } from "react";
 import { Plus, Check, ChevronDown, ChevronRight } from "lucide-react";
-import { Note } from "../../types/note.types";
+import { Note } from '@note-board-app/shared';
 import { TaskRow } from "./TaskItem";
-import { useNotesStore } from "../../store/notesStore";
+import { useNotesStore } from '@note-board-app/shared';
 
 type TaskFilter = "all" | "todo" | "done";
 

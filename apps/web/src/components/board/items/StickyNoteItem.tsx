@@ -2,8 +2,8 @@ import { useState } from "react";
 import { X, Lock, Unlock } from "lucide-react";
 import type {
   BoardItem, StickyItem, ImageItem, TextItem, ToolMode,
-} from "../../../types/board.types";
-import { STICKY_COLORS } from "../../../lib/utils";
+} from '@note-board-app/shared';
+import { STICKY_COLORS } from '@note-board-app/shared';
 
 interface BoardItemViewProps {
   item: BoardItem;

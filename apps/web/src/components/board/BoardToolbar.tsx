@@ -3,8 +3,8 @@ import {
   StickyNote, Image as ImageIcon, Link2 as LinkIcon,
   Grid, Undo2, Redo2, ZoomOut, ZoomIn,
 } from "lucide-react";
-import type { ToolMode } from "../../types/board.types";
-import { DRAW_COLORS, DRAW_WIDTHS, CONN_COLORS } from "../../lib/utils";
+import type { ToolMode } from '@note-board-app/shared';
+import { DRAW_COLORS, DRAW_WIDTHS, CONN_COLORS } from '@note-board-app/shared';
 
 interface BoardToolbarProps {
   tool: ToolMode;

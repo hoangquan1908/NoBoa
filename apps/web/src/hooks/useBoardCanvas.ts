@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef } from 'react';
-import { clamp } from '../lib/utils';
-import { useBoardStore } from '../store/boardStore';
+import { clamp } from '@note-board-app/shared';
+import { useBoardStore } from '@note-board-app/shared';
 
 /**
  * useBoardCanvas — manages pan/zoom viewport for BoardCanvas.

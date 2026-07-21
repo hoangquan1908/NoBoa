@@ -1,7 +1,7 @@
 import { useRef, useCallback, useEffect, useState } from 'react';
-import type { ImageItem, StickyItem } from '../../types/board.types';
-import { BOARD_SIZE } from '../../lib/utils';
-import { useBoardStore } from '../../store/boardStore';
+import type { ImageItem, StickyItem } from '@note-board-app/shared';
+import { BOARD_SIZE } from '@note-board-app/shared';
+import { useBoardStore } from '@note-board-app/shared';
 import { useBoardCanvas } from '../../hooks/useBoardCanvas';
 import { useDrag } from '../../hooks/useDrag';
 import { useUndoRedo } from '../../hooks/useUndoRedo';
@@ -12,7 +12,7 @@ import { StringLinks } from './StringLinks';
 import { Minimap } from './Minimap';
 import { Lightbox } from './Lightbox';
 import { StickyNoteOverlay } from './StickyNoteOverlay';
-import type { Board } from '../../types/board.types';
+import type { Board } from '@note-board-app/shared';
 
 interface BoardCanvasProps {
   board: Board;

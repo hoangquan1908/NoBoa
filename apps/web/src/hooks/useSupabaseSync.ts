@@ -1,6 +1,6 @@
 import { useEffect, useRef } from 'react';
-import { getPendingSync, markSynced, clearSyncedRecords } from '../lib/indexedDb';
-import { syncBoardToSupabase } from '../lib/supabaseBoardSync';
+import { getPendingSync, markSynced, clearSyncedRecords } from '@note-board-app/shared';
+import { syncBoardToSupabase } from '@note-board-app/shared';
 
 const POLL_INTERVAL_MS = 4000;
 

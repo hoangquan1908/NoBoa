@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { User, Lock, Eye, EyeOff, Loader2, StickyNote, X } from "lucide-react";
-import { useAuthStore } from "../store/authStore";
+import { useAuthStore } from '@note-board-app/shared';
 
 type Mode = "signin" | "signup";
 

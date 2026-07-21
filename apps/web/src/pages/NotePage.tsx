@@ -1,10 +1,10 @@
 import { useState, useEffect } from "react";
 import { Plus, X, List, LayoutGrid, ChevronUp, ChevronDown } from "lucide-react";
-import { Note } from "../types/note.types";
-import { Board } from "../types/board.types";
-import { makeBoardStub } from "../lib/utils";
-import { createBoardRemote, renameBoardRemote, deleteBoardRemote } from "../lib/supabaseBoardSync";
-import { deleteBoard as deleteBoardCache } from "../lib/indexedDb";
+import { Note } from '@note-board-app/shared';
+import { Board } from '@note-board-app/shared';
+import { makeBoardStub } from '@note-board-app/shared';
+import { createBoardRemote, renameBoardRemote, deleteBoardRemote } from '@note-board-app/shared';
+import { deleteBoard as deleteBoardCache } from '@note-board-app/shared';
 import { TodoPanel } from "../components/todo/TaskList";
 import { BoardCanvas } from "../components/board/BoardCanvas";
 

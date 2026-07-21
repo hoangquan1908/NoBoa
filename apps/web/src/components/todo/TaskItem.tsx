@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { Check, Pencil, Trash2 } from "lucide-react";
-import { Task } from "../../types/note.types";
+import { Task } from '@note-board-app/shared';
 
 interface TaskRowProps {
   task: Task;

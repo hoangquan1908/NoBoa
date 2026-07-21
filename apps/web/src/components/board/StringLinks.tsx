@@ -1,5 +1,5 @@
-import type { Connection, BoardItem, StickyItem } from '../../types/board.types';
-import { itemCenter } from '../../lib/utils';
+import type { Connection, BoardItem, StickyItem } from '@note-board-app/shared';
+import { itemCenter } from '@note-board-app/shared';
 
 interface StringLinksProps {
   connections: Connection[];

@@ -1,7 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { Plus, ChevronLeft, ChevronRight, ChevronUp, ChevronDown, Trash2, Loader2, LogOut, LogIn } from "lucide-react";
-import { useNotesStore } from "./store/notesStore";
-import { useAuthStore } from "./store/authStore";
+import { useNotesStore, useAuthStore } from "@note-board-app/shared";
 import { NoteView } from "./pages/NotePage";
 import { AuthPage } from "./pages/AuthPage";
 import { useSupabaseSync } from "./hooks/useSupabaseSync";

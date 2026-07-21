@@ -1,5 +1,5 @@
-import { BoardSnapshot, StickyItem } from "../../types/board.types";
-import { MSX, MSY, ptToPath, clamp, MINIMAP_W, MINIMAP_H } from "../../lib/utils";
+import { BoardSnapshot, StickyItem } from '@note-board-app/shared';
+import { MSX, MSY, ptToPath, clamp, MINIMAP_W, MINIMAP_H } from '@note-board-app/shared';
 
 interface MinimapProps {
   snapshot: BoardSnapshot;

@@ -1,6 +1,6 @@
 import { useEffect, useRef } from "react";
 import { X } from "lucide-react";
-import type { StickyItem } from "../../types/board.types";
+import type { StickyItem } from '@note-board-app/shared';
 
 interface StickyNoteOverlayProps {
   sticky: StickyItem;
