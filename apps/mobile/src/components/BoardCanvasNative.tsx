@@ -8,9 +8,8 @@ import {
 import Animated, {
   useSharedValue,
   useAnimatedStyle,
-  withSpring,
 } from 'react-native-reanimated';
-import { Canvas, Path, Box, BoxShadow, rrect, rect, Skia } from '@shopify/react-native-skia';
+import { Canvas, Path, Skia } from '@shopify/react-native-skia';
 import { useBoardStore } from '@note-board-app/shared';
 // Cần import type nếu cần
 // import type { Board } from '@note-board-app/shared';
@@ -118,7 +117,7 @@ export function BoardCanvasNative() {
                     left: item.x,
                     top: item.y,
                     width: 'w' in item ? item.w : 200, 
-                    height: 'h' in item ? item.h : 'auto' as any,
+                    height: 'h' in item ? item.h : undefined,
                     backgroundColor: ('color' in item ? item.color : undefined) || '#FDE68A',
                     padding: 10,
                     borderRadius: 8,
